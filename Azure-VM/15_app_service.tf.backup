@@ -1,0 +1,55 @@
+# App Service Plan (kt01~kt18만)
+resource "azurerm_service_plan" "app_plan" {
+  count               = 18  # kt01~kt18만
+  name                = format("ASP-kt%02dRG-a765", count.index + 1)
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+  location            = azurerm_resource_group.rg[count.index].location
+  os_type             = "Linux"
+  sku_name            = "B1"
+}
+
+# Linux Web App
+resource "azurerm_linux_web_app" "web_app" {
+  count               = 18
+  name                = format("kt%02d-app-service-%s", count.index + 1, random_id.suffix.hex)
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+  location            = azurerm_resource_group.rg[count.index].location
+  service_plan_id     = azurerm_service_plan.app_plan[count.index].id
+
+  site_config {
+    application_stack {
+      python_version = "3.11"
+    }
+  }
+  
+  # Add explicit dependency
+depends_on = [azurerm_service_plan.app_plan]  # ✅ matches declaration
+  
+}
+
+# MySQL Flexible Server
+resource "azurerm_mysql_flexible_server" "mysql" {
+  count               = 18
+  name                = format("kt%02d-app-service-server", count.index + 1)
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+  location            = azurerm_resource_group.rg[count.index].location
+  
+  administrator_login    = "mysqladmin"
+  administrator_password = var.mysql_password
+  
+  sku_name = "B_Standard_B1ms"
+  version  = "8.0.21"
+  
+  storage {
+    size_gb = 20
+  }
+}
+
+variable "mysql_password" { 
+  default = "Ktaict1!"
+  sensitive = true
+}
+
+resource "random_id" "suffix" {
+  byte_length = 4
+}

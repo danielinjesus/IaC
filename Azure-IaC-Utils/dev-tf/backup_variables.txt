@@ -1,0 +1,59 @@
+# BACKUP FILE - 하드코딩된 값들 (환경변수 사용으로 변경됨)
+# variable "tenant_id" { default = "7207cc8b-a576-4e40-8686-1f600b84eb66" }
+# variable "subscription_id" { default = "b3c46442-c2e2-4e40-8856-9da4f944489c" }
+# variable "tenant_email" { default = "@ktaiacademy.onmicrosoft.com" }
+variable "user_suffix" { default = "RAG" }
+variable "user_count" { default = 35 }
+variable "initial_pwd" { default = "Fc1017!!" }
+variable "location" { default = "Korea Central" }
+variable "roles" {
+  type = list(string)
+  default = [
+    "Contributor",
+    "Cognitive Services OpenAI Contributor",
+    "Azure AI Developer"
+  ]
+}
+
+/*
+variable "courses" {
+  description = "교육과정 정보"
+  type = map(object({
+    name          = string
+    student_count = number
+    location      = string
+  }))
+  default = {
+    "01" = {
+      name          = "WebDev"
+      student_count = 30
+      location      = "Korea Central"
+    }
+    "02" = {
+      name          = "DataScience"
+      student_count = 30
+      location      = "Korea Central"
+    }
+    "03" = {
+      name          = "AI"
+      student_count = 30
+      location      = "Korea Central"
+    }
+    "04" = {
+      name          = "Cloud"
+      student_count = 30
+      location      = "Korea Central"
+    }
+    "05" = {
+      name          = "Security"
+      student_count = 30
+      location      = "Korea Central"
+    }
+    "06" = {
+      name          = "DevOps"
+      student_count = 30
+      location      = "Korea Central"
+    }
+  }
+}
+*/

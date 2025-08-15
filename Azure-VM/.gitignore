@@ -1,0 +1,22 @@
+* .gitignore
+# Terraform 상태 파일
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+
+# 계획 파일
+*.tfplan
+
+# 변수 파일 (민감정보 포함)
+*.tfvars
+*.auto.tfvars
+*variables.tf
+
+# Terraform 디렉토리
+.terraform/
+.terraform.lock.hcl  # 이것은 선택사항
+
+# 기타
+crash.log
+override.tf
+override.tf.json

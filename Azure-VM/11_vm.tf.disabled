@@ -1,0 +1,278 @@
+# Random string for unique naming
+resource "random_string" "suffix" {
+  count   = var.live_vm_count
+  length  = 6
+  special = false
+  upper   = false
+}
+# Virtual Network 생성
+resource "azurerm_virtual_network" "vm_vnet" {
+  count               = var.live_vm_count
+  name                = format("vnet%02d%s", count.index + 1, var.user_suffix)
+  address_space       = [format("10.%d.0.0/16", count.index + 1)]
+  location            = azurerm_resource_group.rg[count.index].location
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+}
+# Subnet 생성
+resource "azurerm_subnet" "vm_subnet" {
+  count                = var.live_vm_count
+  name                 = format("subnet%02d%s", count.index + 1, var.user_suffix)
+  resource_group_name  = azurerm_resource_group.rg[count.index].name
+  virtual_network_name = azurerm_virtual_network.vm_vnet[count.index].name
+  address_prefixes     = [format("10.%d.1.0/24", count.index + 1)]
+}
+# Public IP 생성
+resource "azurerm_public_ip" "vm_public_ip" {
+  count               = var.live_vm_count
+  name                = format("pip%02d%s", count.index + 1, var.user_suffix)
+  location            = azurerm_resource_group.rg[count.index].location
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+# Network Security Group 생성
+resource "azurerm_network_security_group" "vm_nsg" {
+  count               = var.live_vm_count
+  name                = format("nsg%02d%s", count.index + 1, var.user_suffix)
+  location            = azurerm_resource_group.rg[count.index].location
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# Network Interface 생성
+resource "azurerm_network_interface" "vm_nic" {
+  count               = var.live_vm_count
+  name                = format("nic%02d%s", count.index + 1, var.user_suffix)
+  location            = azurerm_resource_group.rg[count.index].location
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.vm_subnet[count.index].id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.vm_public_ip[count.index].id
+  }
+}
+
+# Network Interface와 Network Security Group 연결
+resource "azurerm_network_interface_security_group_association" "vm_nic_nsg" {
+  count                     = var.live_vm_count
+  network_interface_id      = azurerm_network_interface.vm_nic[count.index].id
+  network_security_group_id = azurerm_network_security_group.vm_nsg[count.index].id
+}
+
+# SSH Key 생성 (각 VM별로)
+resource "tls_private_key" "vm_ssh_key" {
+  count     = var.live_vm_count
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Linux Virtual Machine 생성
+resource "azurerm_linux_virtual_machine" "vm" {
+  count               = var.live_vm_count
+  name                = format("vm%02d%s", count.index + 1, var.user_suffix)
+  location            = azurerm_resource_group.rg[count.index].location
+  resource_group_name = azurerm_resource_group.rg[count.index].name
+  size                = var.vm_size
+  admin_username      = var.vm_admin_username
+
+  # 패스워드 인증 비활성화 (SSH 키 사용)
+  disable_password_authentication = true
+
+  network_interface_ids = [
+    azurerm_network_interface.vm_nic[count.index].id,
+  ]
+
+  admin_ssh_key {
+    username   = var.vm_admin_username
+    public_key = tls_private_key.vm_ssh_key[count.index].public_key_openssh
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
+    version   = "latest"
+  }
+
+  depends_on = [
+    azurerm_network_interface_security_group_association.vm_nic_nsg
+  ]
+}
+
+
+# # Random string for unique naming
+# resource "random_string" "suffix" {
+#   count   = var.live_vm_count
+#   length  = 6
+#   special = false
+#   upper   = false
+# }
+
+# # Virtual Network 생성
+# resource "azurerm_virtual_network" "vm_vnet" {
+#   count               = var.live_vm_count
+#   name                = format("vnet%02d%s", count.index + 1, var.user_suffix)
+#   address_space       = [format("10.%d.0.0/16", count.index + 1)]
+#   location            = azurerm_resource_group.rg[count.index].location
+#   resource_group_name = azurerm_resource_group.rg[count.index].name
+# }
+
+# # Subnet 생성
+# resource "azurerm_subnet" "vm_subnet" {
+#   count                = var.live_vm_count
+#   name                 = format("subnet%02d%s", count.index + 1, var.user_suffix)
+#   resource_group_name  = azurerm_resource_group.rg[count.index].name
+#   virtual_network_name = azurerm_virtual_network.vm_vnet[count.index].name
+#   address_prefixes     = [format("10.%d.1.0/24", count.index + 1)]
+# }
+
+# # Public IP 생성
+# resource "azurerm_public_ip" "vm_public_ip" {
+#   count               = var.live_vm_count
+#   name                = format("pip%02d%s", count.index + 1, var.user_suffix)
+#   location            = azurerm_resource_group.rg[count.index].location
+#   resource_group_name = azurerm_resource_group.rg[count.index].name
+#   allocation_method   = "Static"
+#   sku                 = "Standard"
+# }
+
+# # Network Security Group 생성
+# resource "azurerm_network_security_group" "vm_nsg" {
+#   count               = var.live_vm_count
+#   name                = format("nsg%02d%s", count.index + 1, var.user_suffix)
+#   location            = azurerm_resource_group.rg[count.index].location
+#   resource_group_name = azurerm_resource_group.rg[count.index].name
+
+#   security_rule {
+#     name                       = "SSH"
+#     priority                   = 1001
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "22"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+
+#   security_rule {
+#     name                       = "HTTP"
+#     priority                   = 1002
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "80"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+
+#   security_rule {
+#     name                       = "HTTPS"
+#     priority                   = 1003
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "443"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+
+#   security_rule {
+#     name                       = "Jupyter"
+#     priority                   = 1004
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "8888"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+# }
+
+# # Network Interface 생성
+# resource "azurerm_network_interface" "vm_nic" {
+#   count               = var.live_vm_count
+#   name                = format("nic%02d%s", count.index + 1, var.user_suffix)
+#   location            = azurerm_resource_group.rg[count.index].location
+#   resource_group_name = azurerm_resource_group.rg[count.index].name
+
+#   ip_configuration {
+#     name                          = "internal"
+#     subnet_id                     = azurerm_subnet.vm_subnet[count.index].id
+#     private_ip_address_allocation = "Dynamic"
+#     public_ip_address_id          = azurerm_public_ip.vm_public_ip[count.index].id
+#   }
+# }
+
+# # Network Interface와 Network Security Group 연결
+# resource "azurerm_network_interface_security_group_association" "vm_nic_nsg" {
+#   count                     = var.live_vm_count
+#   network_interface_id      = azurerm_network_interface.vm_nic[count.index].id
+#   network_security_group_id = azurerm_network_security_group.vm_nsg[count.index].id
+# }
+
+# # SSH Key 생성 (각 VM별로)
+# resource "tls_private_key" "vm_ssh_key" {
+#   count     = var.live_vm_count
+#   algorithm = "RSA"
+#   rsa_bits  = 4096
+# }
+
+# # Linux Virtual Machine 생성
+# resource "azurerm_linux_virtual_machine" "vm" {
+#   count               = var.live_vm_count
+#   name                = format("vm%02d%s", count.index + 1, var.user_suffix)
+#   location            = azurerm_resource_group.rg[count.index].location
+#   resource_group_name = azurerm_resource_group.rg[count.index].name
+#   size                = var.vm_size
+#   admin_username      = var.vm_admin_username
+
+#   # 패스워드 인증 비활성화 (SSH 키 사용)
+#   disable_password_authentication = true
+
+#   network_interface_ids = [
+#     azurerm_network_interface.vm_nic[count.index].id,
+#   ]
+
+#   admin_ssh_key {
+#     username   = var.vm_admin_username
+#     public_key = tls_private_key.vm_ssh_key[count.index].public_key_openssh
+#   }
+
+#   os_disk {
+#     caching              = "ReadWrite"
+#     storage_account_type = "Premium_LRS"
+#   }
+
+#   source_image_reference {
+#     publisher = "Canonical"
+#     offer     = "0001-com-ubuntu-server-jammy"
+#     sku       = "22_04-lts-gen2"
+#     version   = "latest"
+#   }
+
+#   depends_on = [
+#     azurerm_network_interface_security_group_association.vm_nic_nsg
+#   ]
+# }

@@ -1,0 +1,4 @@
+subscription_id="your_azure_subscription_id_here"
+tenant_id="your_azure_tenant_id_here"
+tenant_email="@your_domain.onmicrosoft.com"
+initial_pwd="your_initial_password_here"

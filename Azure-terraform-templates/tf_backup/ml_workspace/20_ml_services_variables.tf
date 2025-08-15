@@ -1,0 +1,18 @@
+variable "create_ml_workspace" { default = true }
+variable "live_workspace_count" { default = 26 }
+variable "ml_vm_size" { default = "Standard_E4ds_v4" }
+variable "ml_idle_shutdown" { default = "PT2H" }
+###################################################################
+# 이 밑으로는 구현되지 않았음. 변수만 선언됨.
+variable "start_computes" { default = false }
+
+# 강의 자료 업로드 자동화 
+variable "setup_materials_version" { default = "none" } # 변경시 실행
+variable "notebook_source_path" { default = "C:/Users/aidan/OneDrive/교육강사/1회차/실습파일" }
+
+# 개인별 API 신청 --> 공통모듈로 전환
+variable "enable_azure_openai" { default = false }
+variable "azure_openai_sku_name" { default = "S0" }
+variable "azure_openai_gpt_model_name" { default = "gpt-4.1-nano" }
+variable "azure_openai_embedding_model_name" { default = "text-embedding-3-small" }
+variable "azure_openai_model_version" { default = "2025-04-14" }
