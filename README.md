@@ -1,4 +1,4 @@
-# 30여명이 수강하는 Azure 기반 강의를 위한 인프라 관리 코드
+# Azure기반 IT 기업교육(30여명) 준비를 위한 인프라 관리 코드(Infrastructure as Code)
 
 ### Terraform을 활용한 선언형 인프라 관리
 - Azure 30여개의 계정과, 계정별 할당된 Resource Group을 생성</h5>
